@@ -10,7 +10,11 @@ import {
   ChevronDown,
   ChevronRight,
   CircleHelp,
+  CircleCheck,
+  CircleDashed,
   ClipboardCheck,
+  Database,
+  FileSearch,
   GraduationCap,
   History,
   LayoutDashboard,
@@ -30,6 +34,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 
 type Screen = 'dashboard' | 'opportunity' | 'plan' | 'session'
+type AiInsightMode = 'supported' | 'limited'
 
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, screen: 'dashboard' as Screen },
@@ -44,6 +49,7 @@ function ProductApp() {
   const [screen, setScreen] = useState<Screen>('dashboard')
   const [menuOpen, setMenuOpen] = useState(false)
   const [progressOpen, setProgressOpen] = useState(false)
+  const [aiInsightMode, setAiInsightMode] = useState<AiInsightMode | null>(null)
   const [toast, setToast] = useState('')
 
   const navigate = (next: Screen) => {
@@ -85,7 +91,12 @@ function ProductApp() {
           onNotify={notify}
         />
         <main id="product-main">
-          {screen === 'dashboard' && <Dashboard onNavigate={navigate} />}
+          {screen === 'dashboard' && (
+            <Dashboard
+              onNavigate={navigate}
+              onGenerateInsight={(mode) => setAiInsightMode(mode)}
+            />
+          )}
           {screen === 'opportunity' && <Opportunity onNavigate={navigate} />}
           {screen === 'plan' && <PlanBuilder onNavigate={navigate} onNotify={notify} />}
           {screen === 'session' && (
@@ -96,6 +107,20 @@ function ProductApp() {
           )}
         </main>
       </div>
+      {aiInsightMode && (
+        <AiStatusDrawer
+          mode={aiInsightMode}
+          onClose={() => setAiInsightMode(null)}
+          onReview={() => {
+            setAiInsightMode(null)
+            if (aiInsightMode === 'supported') {
+              navigate('opportunity')
+            } else {
+              notify('Limited-confidence signal kept under review')
+            }
+          }}
+        />
+      )}
       {progressOpen && <ProgressModal onClose={() => setProgressOpen(false)} />}
       <div className={`product-toast ${toast ? 'is-visible' : ''}`} role="status">
         {toast}
@@ -224,7 +249,13 @@ function Topbar({
   )
 }
 
-function Dashboard({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
+function Dashboard({
+  onNavigate,
+  onGenerateInsight,
+}: {
+  onNavigate: (screen: Screen) => void
+  onGenerateInsight: (mode: AiInsightMode) => void
+}) {
   return (
     <div className="screen screen-dashboard">
       <section className="screen-intro">
@@ -261,6 +292,7 @@ function Dashboard({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
           evidence="12 calls analyzed · $1.2M pipeline affected"
           recommendation="Schedule objection handling review and roleplay session focused on ‘AcmeCorp’ comparisons."
           onNavigate={onNavigate}
+          onGenerateInsight={() => onGenerateInsight('supported')}
         />
         <OpportunityCard
           impact="MEDIUM IMPACT"
@@ -273,6 +305,7 @@ function Dashboard({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
           evidence="10 calls analyzed · 3 representatives affected"
           recommendation="Assign the ‘Effective Discovery’ micro-learning module."
           onNavigate={onNavigate}
+          onGenerateInsight={() => onGenerateInsight('limited')}
           secondary
         />
       </section>
@@ -357,6 +390,7 @@ function OpportunityCard({
   evidence,
   recommendation,
   onNavigate,
+  onGenerateInsight,
   secondary,
 }: {
   impact: string
@@ -369,6 +403,7 @@ function OpportunityCard({
   evidence: string
   recommendation: string
   onNavigate: (screen: Screen) => void
+  onGenerateInsight: () => void
   secondary?: boolean
 }) {
   return (
@@ -401,7 +436,7 @@ function OpportunityCard({
           </span>
         </div>
         <div>
-          <button className="button primary" type="button" onClick={() => onNavigate('opportunity')}>
+          <button className="button primary" type="button" onClick={onGenerateInsight}>
             Generate insight
           </button>
           <button className="button outline" type="button" onClick={() => onNavigate('opportunity')}>
@@ -719,6 +754,293 @@ function CoachingSession({
             <div className="competency"><span><strong>Value Anchoring (Focus)</strong><b>Developing</b></span><i><em style={{ width: '48%' }} /></i></div>
           </Panel>
         </aside>
+      </div>
+    </div>
+  )
+}
+
+function AiStatusDrawer({
+  mode,
+  onClose,
+  onReview,
+}: {
+  mode: AiInsightMode
+  onClose: () => void
+  onReview: () => void
+}) {
+  const [phase, setPhase] = useState(0)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const timings = reduceMotion ? [80, 160, 240] : [650, 1450, 2350]
+    const timers = timings.map((delay, index) =>
+      window.setTimeout(() => setPhase(index + 1), delay),
+    )
+    return () => timers.forEach((timer) => window.clearTimeout(timer))
+  }, [mode])
+
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+      if (event.key === 'Tab' && dialogRef.current) {
+        const items = Array.from(
+          dialogRef.current.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ),
+        )
+        if (!items.length) return
+        const first = items[0]
+        const last = items[items.length - 1]
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault()
+          last.focus()
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault()
+          first.focus()
+        }
+      }
+    }
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', onKey)
+    dialogRef.current?.querySelector<HTMLElement>('button')?.focus()
+    return () => {
+      document.body.style.overflow = ''
+      document.removeEventListener('keydown', onKey)
+      previous?.focus()
+    }
+  }, [onClose])
+
+  const loadingSteps = [
+    {
+      icon: FileSearch,
+      title: 'Reviewing conversation signals',
+      detail: '45 late-stage calls',
+    },
+    {
+      icon: Database,
+      title: 'Connecting CRM context',
+      detail: '$1.2M active pipeline',
+    },
+    {
+      icon: Sparkles,
+      title: 'Assessing pattern confidence',
+      detail: 'Behavior consistency and impact',
+    },
+  ]
+
+  return (
+    <div
+      className="ai-status-overlay"
+      role="presentation"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <div
+        className="ai-status-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ai-status-title"
+        aria-describedby="ai-status-description"
+        aria-busy={phase < 3}
+        ref={dialogRef}
+      >
+        <header className="ai-status-header">
+          <div>
+            <span className="ai-status-label">
+              <Sparkles size={15} aria-hidden="true" />
+              AI Status
+            </span>
+            <strong>{phase < 3 ? 'Analysis in progress' : 'Analysis complete'}</strong>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close AI status">
+            <X size={22} />
+          </button>
+        </header>
+
+        {phase < 3 ? (
+          <div className="ai-loading-state" aria-live="polite">
+            <div className="ai-orbit" aria-hidden="true">
+              <Sparkles size={28} />
+              <i />
+              <i />
+              <i />
+            </div>
+            <div>
+              <h2 id="ai-status-title">Generating performance insight</h2>
+              <p id="ai-status-description">
+                Valora is connecting performance signals to coaching evidence.
+              </p>
+            </div>
+
+            <div className="ai-progress-track" aria-hidden="true">
+              <i style={{ width: `${Math.max(12, phase * 34)}%` }} />
+            </div>
+
+            <ol className="ai-loading-steps">
+              {loadingSteps.map((step, index) => {
+                const isComplete = phase > index
+                const isActive = phase === index
+                return (
+                  <li
+                    key={step.title}
+                    className={`${isComplete ? 'is-complete' : ''} ${isActive ? 'is-active' : ''}`}
+                    aria-current={isActive ? 'step' : undefined}
+                  >
+                    <span className="ai-step-icon">
+                      {isComplete ? (
+                        <CircleCheck size={19} />
+                      ) : (
+                        <step.icon size={18} />
+                      )}
+                    </span>
+                    <span>
+                      <strong>{step.title}</strong>
+                      <small>{step.detail}</small>
+                    </span>
+                    <b>{isComplete ? 'Complete' : isActive ? 'Analyzing' : 'Waiting'}</b>
+                  </li>
+                )
+              })}
+            </ol>
+
+            <p className="ai-loading-note">
+              Recommendations appear only after evidence and confidence checks finish.
+            </p>
+          </div>
+        ) : mode === 'limited' ? (
+          <AiLimitedConfidenceResult onReview={onReview} />
+        ) : (
+          <AiSupportedResult onReview={onReview} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function AiSupportedResult({ onReview }: { onReview: () => void }) {
+  return (
+    <div className="ai-result-state ai-result-state--supported" aria-live="polite">
+      <div className="ai-result-heading">
+        <span className="ai-result-icon">
+          <CircleCheck size={24} />
+        </span>
+        <div>
+          <h2 id="ai-status-title">Insight ready for review</h2>
+          <span className="confidence-badge">Confidence: High / Supported</span>
+        </div>
+      </div>
+      <p id="ai-status-description">
+        A consistent closing-skills pattern is supported by call evidence and connected
+        revenue context. Review the evidence before creating a coaching plan.
+      </p>
+
+      <section className="signal-status" aria-labelledby="signal-status-title">
+        <h3 id="signal-status-title">Signal Status</h3>
+        <StatusRow
+          status="confirmed"
+          title="Conversation evidence reviewed"
+          detail="38 of 45 calls matched the detected pattern."
+        />
+        <StatusRow
+          status="confirmed"
+          title="CRM impact connected"
+          detail="$1.2M in active pipeline is affected."
+        />
+        <StatusRow
+          status="confirmed"
+          title="Pattern consistency confirmed"
+          detail="The behavior repeats across late-stage conversations."
+        />
+      </section>
+
+      <div className="ai-recommended-action">
+        <Sparkles size={20} />
+        <div>
+          <span>Recommended Action</span>
+          <strong>Review supporting evidence before creating the coaching plan.</strong>
+        </div>
+      </div>
+      <button className="button primary ai-result-cta" type="button" onClick={onReview}>
+        Review Insight
+        <ChevronRight size={17} />
+      </button>
+    </div>
+  )
+}
+
+function AiLimitedConfidenceResult({ onReview }: { onReview: () => void }) {
+  return (
+    <div className="ai-result-state ai-result-state--limited" aria-live="polite">
+      <div className="ai-result-heading">
+        <span className="ai-result-icon">
+          <CircleDashed size={24} />
+        </span>
+        <div>
+          <h2 id="ai-status-title">More Evidence Needed</h2>
+          <span className="confidence-badge confidence-badge--limited">
+            Confidence: Medium / Limited
+          </span>
+        </div>
+      </div>
+      <p id="ai-status-description">
+        We detected possible coaching patterns, but available evidence is limited.
+        Review supporting evidence before creating a coaching plan.
+      </p>
+
+      <section className="signal-status" aria-labelledby="signal-status-title">
+        <h3 id="signal-status-title">Signal Status</h3>
+        <StatusRow
+          status="confirmed"
+          title="CRM activity reviewed"
+          detail="Last 30 days of opportunity data processed."
+        />
+        <StatusRow
+          status="confirmed"
+          title="Recent call data available"
+          detail="12 calls logged in the past week."
+        />
+        <StatusRow
+          status="limited"
+          title="Limited examples detected"
+          detail="Only 2 instances of objection mishandling found."
+        />
+        <StatusRow
+          status="limited"
+          title="Pattern consistency unclear"
+          detail="Not enough data to establish a solid behavioral trend."
+        />
+      </section>
+
+      <div className="ai-recommended-action ai-recommended-action--limited">
+        <CircleDashed size={20} />
+        <div>
+          <span>Recommended Action</span>
+          <strong>Review evidence before creating a coaching intervention.</strong>
+        </div>
+      </div>
+      <button className="button outline ai-result-cta" type="button" onClick={onReview}>
+        Keep Monitoring
+      </button>
+    </div>
+  )
+}
+
+function StatusRow({
+  status,
+  title,
+  detail,
+}: {
+  status: 'confirmed' | 'limited'
+  title: string
+  detail: string
+}) {
+  return (
+    <div className={`signal-row signal-row--${status}`}>
+      <span>{status === 'confirmed' ? <CircleCheck size={19} /> : <CircleDashed size={19} />}</span>
+      <div>
+        <strong>{title}</strong>
+        <p>{detail}</p>
       </div>
     </div>
   )
