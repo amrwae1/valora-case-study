@@ -285,12 +285,12 @@ function Dashboard({
           impact="HIGH IMPACT"
           risk="REVENUE RISK"
           title="Closing Skills Decline"
-          description="Win rate dropped 15% in last 3 weeks. Competitor mentions handled poorly on recent calls."
+          description="Current win rate is 24%, down 12 points from the 30-day baseline across late-stage calls."
           rep="Jane Doe"
           role="AE · West Coast"
           initials="JD"
-          evidence="12 calls analyzed · $1.2M pipeline affected"
-          recommendation="Schedule objection handling review and roleplay session focused on ‘AcmeCorp’ comparisons."
+          evidence="38 of 45 calls support the pattern · $1.2M pipeline affected"
+          recommendation="Generate the insight to review confidence, supporting evidence, and business impact."
           onNavigate={onNavigate}
           onGenerateInsight={() => onGenerateInsight('supported')}
         />
@@ -303,7 +303,7 @@ function Dashboard({
           role="SDR · EMEA"
           initials="JS"
           evidence="10 calls analyzed · 3 representatives affected"
-          recommendation="Assign the ‘Effective Discovery’ micro-learning module."
+          recommendation="Generate the insight to confirm whether enough evidence exists for coaching."
           onNavigate={onNavigate}
           onGenerateInsight={() => onGenerateInsight('limited')}
           secondary
@@ -422,7 +422,7 @@ function OpportunityCard({
         <div className="recommendation-line">
           <Sparkles size={20} />
           <div>
-            <strong>Recommended Action</strong>
+            <strong>AI Review Required</strong>
             <span>{recommendation}</span>
           </div>
         </div>
@@ -449,6 +449,15 @@ function OpportunityCard({
 }
 
 function Opportunity({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
+  const [selectedSteps, setSelectedSteps] = useState<string[]>([])
+  const toggleStep = (step: string) => {
+    setSelectedSteps((current) =>
+      current.includes(step)
+        ? current.filter((item) => item !== step)
+        : [...current, step],
+    )
+  }
+
   return (
     <div className="screen opportunity-screen">
       <section className="opportunity-hero">
@@ -459,10 +468,18 @@ function Opportunity({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
             <span className="tag active"><i /> ACTIVE</span>
           </div>
           <h1>Closing Skills Decline</h1>
-          <p>Win-rate decline detected in late-stage conversations affecting revenue outcomes.</p>
+          <p>Current win rate is 24%, down 12 points from the 30-day baseline across 45 late-stage calls.</p>
         </div>
-        <button className="button primary large" type="button" onClick={() => onNavigate('plan')}>
-          Create Coaching Plan
+        <button
+          className="button primary large"
+          type="button"
+          onClick={() =>
+            document
+              .getElementById('recommended-coaching-plan')
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        >
+          Review Suggested Plan
         </button>
       </section>
 
@@ -471,7 +488,7 @@ function Opportunity({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
           <section>
             <h2>Impact Assessment</h2>
             <div className="impact-cards">
-              <SmallMetric label="Win Rate Decline" value="24%" change="−15%" danger />
+              <SmallMetric label="Current Win Rate" value="24%" change="−12 pts vs 36% baseline" danger />
               <SmallMetric label="Pipeline Affected" value="$1.2M" />
               <SmallMetric label="Deals at Risk" value="8" />
               <SmallMetric label="Potential Recovery" value="+$320K" good />
@@ -484,14 +501,14 @@ function Opportunity({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
               <h2>Detected Performance Pattern</h2>
             </div>
             <p>
-              Over the last 14 days, the team’s close rate has dropped by 12% in the
+              Over the last 14 days, the team’s close rate has dropped by 12 percentage points in the
               final negotiation stage. Analysis of 45 late-stage calls indicates a
               consistent failure to secure clear next steps before ending the call,
               leading to stalled deals.
             </p>
             <div className="pattern-metrics">
               <div><span>Impacted Pipeline</span><strong>$1.2M</strong></div>
-              <div><span>Win Rate Drop</span><strong className="danger-copy">−12%</strong></div>
+              <div><span>Win Rate Change</span><strong className="danger-copy">−12 pts</strong></div>
               <div><span>Calls Analyzed</span><strong>45</strong></div>
               <div><span>Affected Reps</span><strong>6</strong></div>
             </div>
@@ -522,16 +539,48 @@ function Opportunity({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
             <span className="aside-label">Affected Reps (3)</span>
             <div className="avatar-stack"><span>SJ</span><span>MR</span><span>AT</span></div>
           </Panel>
-          <Panel className="recommended-plan">
+          <Panel className="recommended-plan" id="recommended-coaching-plan">
             <h2>Recommended Coaching Plan</h2>
             <strong className="plan-name">Objection Handling Recovery</strong>
-            <label><input type="checkbox" defaultChecked /> Review highlighted call snippets.</label>
-            <label><input type="checkbox" defaultChecked /> Draft feedback on securing micro-commitments.</label>
-            <label><input type="checkbox" defaultChecked /> Schedule a 15-minute roleplay session.</label>
+            <p className="plan-review-hint" id="plan-review-hint">
+              AI suggestions remain unapproved until you select the steps that belong in the plan.
+            </p>
+            <label>
+              <input
+                type="checkbox"
+                checked={selectedSteps.includes('review')}
+                onChange={() => toggleStep('review')}
+              />
+              Review highlighted call snippets.
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={selectedSteps.includes('feedback')}
+                onChange={() => toggleStep('feedback')}
+              />
+              Draft feedback on securing micro-commitments.
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={selectedSteps.includes('practice')}
+                onChange={() => toggleStep('practice')}
+              />
+              Schedule a 15-minute roleplay session.
+            </label>
             <span className="aside-label">Suggested Timeline</span>
             <div className="timeline-row"><CalendarDays size={18} /> Within 7 days</div>
             <button className="button outline" type="button"><Plus size={18} /> Add Custom Step</button>
-            <button className="button primary" type="button" onClick={() => onNavigate('plan')}>Create Coaching Plan</button>
+            <button
+              className="button primary"
+              type="button"
+              disabled={selectedSteps.length === 0}
+              aria-describedby="plan-review-hint"
+              onClick={() => onNavigate('plan')}
+            >
+              Create Coaching Plan
+            </button>
           </Panel>
         </aside>
       </div>
@@ -583,26 +632,52 @@ function PlanBuilder({
   onNotify: (message: string) => void
 }) {
   const [pace, setPace] = useState('Accelerated Recovery (3hr/wk)')
+  const [reviewConfirmed, setReviewConfirmed] = useState(false)
+  const [lastSaved, setLastSaved] = useState('Not saved')
   return (
     <div className="screen plan-screen">
       <div className="plan-layout">
         <div className="plan-main">
           <section className="plan-heading">
-            <div className="draft-row"><span>DRAFT</span><small>Last saved 2m ago</small></div>
+            <div className="draft-row"><span>DRAFT</span><small>{lastSaved}</small></div>
             <h1>Closing Skills Recovery Plan</h1>
             <p>Structured coaching intervention for <strong>Jane Doe</strong></p>
             <div className="plan-heading-actions">
-              <button className="button primary" type="button" onClick={() => onNavigate('session')}>Activate Coaching Plan</button>
-              <button className="button outline" type="button" onClick={() => onNotify('Draft saved')}>Save Progress</button>
+              <button
+                className="button primary"
+                type="button"
+                disabled={!reviewConfirmed}
+                onClick={() => onNavigate('session')}
+              >
+                Activate Coaching Plan
+              </button>
+              <button
+                className="button outline"
+                type="button"
+                onClick={() => {
+                  setLastSaved('Saved just now')
+                  onNotify('Draft saved')
+                }}
+              >
+                Save Progress
+              </button>
+              <label className="activation-approval">
+                <input
+                  type="checkbox"
+                  checked={reviewConfirmed}
+                  onChange={(event) => setReviewConfirmed(event.target.checked)}
+                />
+                <span>I reviewed the evidence and coaching path.</span>
+              </label>
             </div>
           </section>
 
           <Panel className="snapshot-panel">
             <div className="panel-heading"><h2>Performance Snapshot</h2><BarChart3 size={21} /></div>
             <div className="snapshot-grid">
-              <SmallMetric label="Late-stage Conversion" value="−14%" change="vs Team Benchmark (32%)" danger />
+              <SmallMetric label="Current Win Rate" value="24%" change="−12 pts vs 36% baseline" danger />
               <SmallMetric label="Stalled Stages" value="62%" change="Pipeline loss at ‘Negotiation’" />
-              <SmallMetric label="Business Impact" value="$182K" change="Projected recovery potential" good />
+              <SmallMetric label="Pipeline Affected" value="$1.2M" change="Potential recovery: +$320K" good />
             </div>
             <div className="pattern-callout"><Sparkles size={22} /><p><strong>Detected Performance Pattern:</strong> Late-stage conversations show hesitation when moving from value discussion into commitment confirmation.</p></div>
           </Panel>
@@ -610,8 +685,8 @@ function PlanBuilder({
           <section className="coaching-path">
             <div className="path-title"><Sparkles size={25} /><h2>Recommended Coaching Path</h2></div>
             <div className="path-grid">
-              <PathCard number="01" title="Self-Assessment" text="Review 3 flagged calls from the last week." complete />
-              <PathCard number="02" title="Guided Practice" text="Practice handling the ‘Legal Review’ objection." active />
+              <PathCard number="01" title="Self-Assessment" text="Review 3 flagged calls from the last week." />
+              <PathCard number="02" title="Guided Practice" text="Practice handling the ‘Legal Review’ objection." />
               <PathCard number="03" title="Apply in Calls" text="Manager shadows the ACME Corp closing call." />
               <PathCard number="04" title="Impact Review" text="Review progress and align on next steps." />
             </div>
@@ -655,7 +730,7 @@ function PlanBuilder({
             <ProgressBar label="Current Closing Skill" value={64} detail="64" />
             <ProgressBar label="Target Skill Level" value={80} detail="80" dark />
             <div className="tracker-row"><span>Timeline</span><strong>30 Days</strong></div>
-            <div className="tracker-row"><span>Potential Upside</span><strong>+$24K/mo</strong></div>
+            <div className="tracker-row"><span>Potential Recovery</span><strong>+$320K</strong></div>
           </Panel>
           <Panel>
             <div className="panel-heading"><h2>Next Actions</h2><span className="count-badge">3</span></div>
@@ -687,7 +762,22 @@ function CoachingSession({
   onComplete: () => void
   onNotify: (message: string) => void
 }) {
-  const [practiceStarted, setPracticeStarted] = useState(false)
+  const [practiceStatus, setPracticeStatus] = useState<'idle' | 'active' | 'complete'>('idle')
+  const [callEvidenceReviewed, setCallEvidenceReviewed] = useState(false)
+  const [commitmentsOpen, setCommitmentsOpen] = useState(false)
+  const [commitments, setCommitments] = useState({
+    valueQuestion: false,
+    liveCalls: false,
+    review: false,
+  })
+  const commitmentCount = Object.values(commitments).filter(Boolean).length
+  const canComplete =
+    callEvidenceReviewed && practiceStatus === 'complete' && commitmentCount >= 2
+
+  const toggleCommitment = (key: keyof typeof commitments) => {
+    setCommitments((current) => ({ ...current, [key]: !current[key] }))
+  }
+
   return (
     <div className="screen session-screen">
       <div className="session-layout">
@@ -700,7 +790,7 @@ function CoachingSession({
           </Panel>
 
           <Panel className="growth-panel">
-            <div className="number-title"><span>1</span><h2>Shared Growth Alignment</h2><b>ALIGNED</b></div>
+            <div className="number-title"><span>1</span><h2>Shared Growth Alignment</h2><b>DISCUSSION GUIDE</b></div>
             <div className="growth-grid">
               <div><h3 className="positive-copy">Strengths</h3><ul><li>Strong rapport building in first 5 minutes.</li><li>Clear articulation of feature sets.</li></ul></div>
               <div><h3 className="danger-copy">Growth Areas</h3><ul><li>Quantifying the cost of inaction.</li><li>Delaying pricing until value is confirmed.</li></ul></div>
@@ -708,33 +798,121 @@ function CoachingSession({
           </Panel>
 
           <Panel className="call-review-panel">
-            <div className="panel-heading"><div className="call-review-title"><button type="button" aria-label="Play call review"><Play size={20} /></button><h2>Call Review: Acme Corp Demo</h2></div><span className="timecode">04:12 / 15:30</span></div>
+            <div className="panel-heading">
+              <div className="call-review-title">
+                <span className="session-step-number">2</span>
+                <button type="button" disabled aria-label="Call playback unavailable in this prototype">
+                  <Play size={20} />
+                </button>
+                <h2>Call Review: Acme Corp Demo</h2>
+              </div>
+              <span className="timecode">04:12 / 15:30</span>
+            </div>
             <div className="waveform" aria-hidden="true">{Array.from({ length: 16 }).map((_, index) => <i key={index} />)}</div>
             <div className="transcript-card">
               <p><strong>Prospect:</strong><span>“It sounds interesting, but we’re mainly concerned about implementation time disrupting current ops.”</span></p>
-              <p><strong>Alex:</strong><span>“Yeah, implementation can take a bit. But once it’s up, it’s pretty smooth. We offer onboarding support.”</span></p>
+              <p><strong>Jane:</strong><span>“Yeah, implementation can take a bit. But once it’s up, it’s pretty smooth. We offer onboarding support.”</span></p>
               <div className="coaching-moment"><Sparkles size={20} /><p><em>Coaching Moment Detected to anchor value.</em><strong>Pattern:</strong> Conversation moved toward solution before business impact was confirmed.<strong>Try:</strong> “What impact would solving this have on your team?”<strong>Why:</strong> <em>Value connection improves negotiation strength.</em></p></div>
             </div>
+            <label className="evidence-confirmation">
+              <input
+                type="checkbox"
+                checked={callEvidenceReviewed}
+                onChange={(event) => setCallEvidenceReviewed(event.target.checked)}
+              />
+              <span>I reviewed this call evidence and agree it belongs in the session.</span>
+            </label>
           </Panel>
 
           <Panel className="practice-panel">
             <div className="number-title"><span>3</span><h2>Applied Practice</h2></div>
-            <div className={`roleplay-card ${practiceStarted ? 'is-started' : ''}`}>
+            <div className={`roleplay-card ${practiceStatus !== 'idle' ? 'is-started' : ''} ${practiceStatus === 'complete' ? 'is-complete' : ''}`}>
               <Mic2 size={40} />
-              <strong>{practiceStarted ? 'Practice in progress' : 'Roleplay: Customer asks for discount'}</strong>
+              <strong>
+                {practiceStatus === 'idle'
+                  ? 'Roleplay: Customer asks for discount'
+                  : practiceStatus === 'active'
+                    ? 'Practice in progress'
+                    : 'Practice completed'}
+              </strong>
               <span>Skill Focus: Value Positioning</span>
               <div><h3>Success Criteria</h3><p>✓ Confirm business impact</p><p>✓ Avoid early discounting</p><p>✓ Create urgency before pricing discussion</p></div>
-              <button className="button primary" type="button" onClick={() => setPracticeStarted((value) => !value)}>{practiceStarted ? 'Pause Practice' : 'Start Practice'}</button>
+              <button
+                className="button primary"
+                type="button"
+                disabled={practiceStatus === 'complete'}
+                onClick={() =>
+                  setPracticeStatus((current) => (current === 'idle' ? 'active' : 'complete'))
+                }
+              >
+                {practiceStatus === 'idle'
+                  ? 'Start Practice'
+                  : practiceStatus === 'active'
+                    ? 'Complete Practice'
+                    : 'Practice Completed'}
+              </button>
             </div>
           </Panel>
 
           <Panel className="commitments-panel">
-            <button type="button" onClick={() => onNotify('Action items saved')}>
-              <span>Action Items & Commitments</span>
-              <ChevronDown size={26} />
+            <button
+              type="button"
+              aria-expanded={commitmentsOpen}
+              aria-controls="session-commitments"
+              onClick={() => setCommitmentsOpen((current) => !current)}
+            >
+              <span>Action Items & Commitments <small>{commitmentCount}/3 selected</small></span>
+              <ChevronDown className={commitmentsOpen ? 'is-open' : ''} size={26} />
             </button>
+            {commitmentsOpen && (
+              <div className="commitment-options" id="session-commitments">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={commitments.valueQuestion}
+                    onChange={() => toggleCommitment('valueQuestion')}
+                  />
+                  <span><strong>Jane</strong> will ask a value-impact question before discussing price.</span>
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={commitments.liveCalls}
+                    onChange={() => toggleCommitment('liveCalls')}
+                  />
+                  <span><strong>Jane</strong> will apply the framework in five eligible late-stage calls.</span>
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={commitments.review}
+                    onChange={() => toggleCommitment('review')}
+                  />
+                  <span><strong>Sarah</strong> will review evidence after the five-call measurement window.</span>
+                </label>
+              </div>
+            )}
           </Panel>
-          <button className="button primary complete-session" type="button" onClick={onComplete}>Complete Coaching Session</button>
+          <div className="session-completion-status" id="session-completion-status" aria-live="polite">
+            <span className={callEvidenceReviewed ? 'is-ready' : ''}>
+              {callEvidenceReviewed ? <CheckCircle2 size={15} /> : <CircleDashed size={15} />} Evidence reviewed
+            </span>
+            <span className={practiceStatus === 'complete' ? 'is-ready' : ''}>
+              {practiceStatus === 'complete' ? <CheckCircle2 size={15} /> : <CircleDashed size={15} />} Practice completed
+            </span>
+            <span className={commitmentCount >= 2 ? 'is-ready' : ''}>
+              {commitmentCount >= 2 ? <CheckCircle2 size={15} /> : <CircleDashed size={15} />} Two commitments selected
+            </span>
+          </div>
+          <button
+            className="button primary complete-session"
+            type="button"
+            disabled={!canComplete}
+            aria-describedby="session-completion-status"
+            onClick={onComplete}
+          >
+            Complete Coaching Session
+          </button>
         </div>
 
         <aside className="assistant-panel">
@@ -742,7 +920,7 @@ function CoachingSession({
           <p>Contextually aware intelligence for your coaching session.</p>
           <Panel>
             <span className="aside-label blue">Current Context: Call Review</span>
-            <h3>Suggested Conversation Starters for Alex:</h3>
+            <h3>Suggested Conversation Starters for Jane:</h3>
             <div className="starter"><strong>Explore:</strong><p>“What changed when the conversation moved toward pricing?”</p></div>
             <div className="starter"><strong>Reflect:</strong><p>“How could we connect pricing back to business goals?”</p></div>
             <button type="button" onClick={() => onNotify('Conversation starter added to notes')}>Add to Notes</button>
@@ -1079,21 +1257,37 @@ function ProgressModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="progress-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div className="progress-dialog" role="dialog" aria-modal="true" aria-labelledby="progress-title" ref={dialogRef}>
-        <header><span><ShieldCheck size={27} /><h2 id="progress-title">Coaching Progress Updated</h2></span><button type="button" onClick={onClose} aria-label="Close progress update"><X size={24} /></button></header>
+        <header><span><ShieldCheck size={27} /><h2 id="progress-title">Coaching Session Completed</h2></span><button type="button" onClick={onClose} aria-label="Close session summary"><X size={24} /></button></header>
         <div className="progress-body">
-          <section><h3>Completed Activities</h3><ul className="completed-list"><li><CheckCircle2 /> Practice session completed</li><li><CheckCircle2 /> 5 customer conversations reviewed</li><li><CheckCircle2 /> Manager feedback provided</li></ul></section>
-          <section><h3>Observed Changes</h3><div className="observed-grid"><div><span>Value Before Pricing</span><strong><ArrowUpRight /> +35%</strong></div><div><span>Early Discount Behavior</span><strong><ArrowDownRight /> −18%</strong></div><div><span>Next-Step Clarity</span><strong><ArrowUpRight /> +22%</strong></div></div></section>
-          <div className="ai-reflection"><Sparkles /><p><strong>AI Reflection</strong>“Jane is showing stronger value framing behavior. Continue reinforcement before expanding focus areas.”</p></div>
-          <section className="recommendation-updates"><h3>Future Recommendations Updated</h3><label><input type="checkbox" defaultChecked /><span>Jane’s skill profile updated<small>Value positioning confidence increased</small></span></label><label><input type="checkbox" /><span>Coaching focus adjusted<small>Reduced priority on pricing objections</small></span></label><label><input type="checkbox" /><span>Team patterns refreshed<small>Added successful behavior examples</small></span></label><span className="aside-label">Manager Review</span><p>Sarah confirmed these updates before applying changes.</p></section>
+          <section><h3>Completed Activities</h3><ul className="completed-list"><li><CheckCircle2 /> Call evidence reviewed by the manager</li><li><CheckCircle2 /> Guided roleplay practice completed</li><li><CheckCircle2 /> Coaching commitments captured</li></ul></section>
+          <section>
+            <h3>Measurement Plan</h3>
+            <div className="observed-grid measurement-grid">
+              <div><span>Evidence Window</span><strong>5 calls</strong><small>Eligible late-stage conversations</small></div>
+              <div><span>Review Timing</span><strong>After threshold</strong><small>No outcome claim before enough evidence</small></div>
+              <div><span>Current Status</span><strong>Monitoring</strong><small>Awaiting observable behavior</small></div>
+            </div>
+          </section>
+          <div className="ai-reflection"><Sparkles /><p><strong>AI Measurement Status</strong>No performance change is claimed yet. Valora will compare the next five eligible calls with the 30-day baseline, then ask Sarah to review the evidence before applying any profile update.</p></div>
+          <section className="recommendation-updates">
+            <h3>What Happens Next</h3>
+            <ul className="next-measurement-list">
+              <li><span>1</span><p><strong>Observe</strong>Collect five eligible late-stage calls without changing Jane’s profile.</p></li>
+              <li><span>2</span><p><strong>Compare</strong>Review value framing, discount timing, and next-step clarity against the baseline.</p></li>
+              <li><span>3</span><p><strong>Approve</strong>Sarah confirms any recommendation before it affects coaching priorities.</p></li>
+            </ul>
+            <span className="aside-label">Human Control</span>
+            <p>No skill-profile or team-pattern changes were applied automatically.</p>
+          </section>
         </div>
-        <footer><button className="button primary" type="button" onClick={onClose}>Done</button></footer>
+        <footer><button className="button primary" type="button" onClick={onClose}>Return to Coaching</button></footer>
       </div>
     </div>
   )
 }
 
-function Panel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <section className={`panel ${className}`}>{children}</section>
+function Panel({ children, className = '', id }: { children: React.ReactNode; className?: string; id?: string }) {
+  return <section className={`panel ${className}`} id={id}>{children}</section>
 }
 
 function ProgressBar({ label, value, detail, dark }: { label: string; value: number; detail: string; dark?: boolean }) {
