@@ -36,6 +36,33 @@ import { useEffect, useRef, useState } from 'react'
 type Screen = 'dashboard' | 'opportunity' | 'plan' | 'session'
 type AiInsightMode = 'supported' | 'limited'
 
+const AI_LOADING_STEPS = [
+  {
+    icon: FileSearch,
+    title: 'Reviewing conversation signals',
+    detail: '45 late-stage calls',
+  },
+  {
+    icon: Activity,
+    title: 'Comparing the performance baseline',
+    detail: 'Current period vs previous 30 days',
+  },
+  {
+    icon: Database,
+    title: 'Connecting CRM context',
+    detail: '$1.2M active pipeline',
+  },
+  {
+    icon: Sparkles,
+    title: 'Calibrating pattern confidence',
+    detail: 'Evidence consistency and business impact',
+  },
+] as const
+
+const AI_PHASE_DELAYS = [1400, 3100, 5000, 6900]
+const AI_REDUCED_MOTION_PHASE_DELAYS = [300, 600, 900, 1200]
+const AI_PROGRESS_BY_PHASE = [10, 32, 56, 79, 100]
+
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, screen: 'dashboard' as Screen },
   { label: 'Performance', icon: TrendingUp },
@@ -951,7 +978,9 @@ function AiStatusDrawer({
 
   useEffect(() => {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const timings = reduceMotion ? [80, 160, 240] : [650, 1450, 2350]
+    const timings = reduceMotion
+      ? AI_REDUCED_MOTION_PHASE_DELAYS
+      : AI_PHASE_DELAYS
     const timers = timings.map((delay, index) =>
       window.setTimeout(() => setPhase(index + 1), delay),
     )
@@ -990,24 +1019,6 @@ function AiStatusDrawer({
     }
   }, [onClose])
 
-  const loadingSteps = [
-    {
-      icon: FileSearch,
-      title: 'Reviewing conversation signals',
-      detail: '45 late-stage calls',
-    },
-    {
-      icon: Database,
-      title: 'Connecting CRM context',
-      detail: '$1.2M active pipeline',
-    },
-    {
-      icon: Sparkles,
-      title: 'Assessing pattern confidence',
-      detail: 'Behavior consistency and impact',
-    },
-  ]
-
   return (
     <div
       className="ai-status-overlay"
@@ -1020,7 +1031,7 @@ function AiStatusDrawer({
         aria-modal="true"
         aria-labelledby="ai-status-title"
         aria-describedby="ai-status-description"
-        aria-busy={phase < 3}
+        aria-busy={phase < AI_LOADING_STEPS.length}
         ref={dialogRef}
       >
         <header className="ai-status-header">
@@ -1029,14 +1040,18 @@ function AiStatusDrawer({
               <Sparkles size={15} aria-hidden="true" />
               AI Status
             </span>
-            <strong>{phase < 3 ? 'Analysis in progress' : 'Analysis complete'}</strong>
+            <strong>
+              {phase < AI_LOADING_STEPS.length
+                ? `Analysis in progress · ${Math.min(phase + 1, AI_LOADING_STEPS.length)} of ${AI_LOADING_STEPS.length}`
+                : 'Analysis complete'}
+            </strong>
           </div>
           <button type="button" onClick={onClose} aria-label="Close AI status">
             <X size={22} />
           </button>
         </header>
 
-        {phase < 3 ? (
+        {phase < AI_LOADING_STEPS.length ? (
           <div className="ai-loading-state" aria-live="polite">
             <div className="ai-orbit" aria-hidden="true">
               <Sparkles size={28} />
@@ -1052,11 +1067,15 @@ function AiStatusDrawer({
             </div>
 
             <div className="ai-progress-track" aria-hidden="true">
-              <i style={{ width: `${Math.max(12, phase * 34)}%` }} />
+              <i
+                style={{
+                  transform: `scaleX(${AI_PROGRESS_BY_PHASE[phase] / 100})`,
+                }}
+              />
             </div>
 
             <ol className="ai-loading-steps">
-              {loadingSteps.map((step, index) => {
+              {AI_LOADING_STEPS.map((step, index) => {
                 const isComplete = phase > index
                 const isActive = phase === index
                 return (
@@ -1083,7 +1102,8 @@ function AiStatusDrawer({
             </ol>
 
             <p className="ai-loading-note">
-              Recommendations appear only after evidence and confidence checks finish.
+              Valora checks evidence, baseline change, and business context before
+              showing a recommendation.
             </p>
           </div>
         ) : mode === 'limited' ? (
